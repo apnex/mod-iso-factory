@@ -1,0 +1,41 @@
+#!ipxe
+
+# set variables
+set hostname router
+set alpine-repo http://dl-cdn.alpinelinux.org/alpine
+set version latest-stable
+set arch x86_64
+set flavor virt
+set netboot ${alpine-repo}/${version}/releases/${arch}/netboot
+set apkovl http://pxe.apnex.io/alpine/install.apkovl.tar.gz
+set bootscript http://pxe.apnex.io/alpine/alpine-runonce.start
+
+# init and set net0
+ifopen net0
+set net0/ip 192.168.0.2
+set net0/netmask 255.255.255.0
+set net0/gateway 192.168.0.1
+set dns 8.8.8.8
+
+# show net stats
+echo ADDRESS-: ${net0/ip}
+echo NETMASK-: ${net0/netmask}
+echo GATEWAY-: ${net0/gateway}
+echo DNS-----: ${dns}
+route
+ifstat net0
+
+#kernel param syntax for ip=
+#https://www.kernel.org/doc/Documentation/filesystems/nfs/nfsroot.txt
+
+# init kernel with params and boot
+initrd ${netboot}/initramfs-${flavor}
+kernel ${netboot}/vmlinuz-${flavor} \
+    ip=${net0/ip}::${net0/gateway}:${net0/netmask}:::none:${dns} \
+    hostname=${hostname} \
+    modules=loop,squashfs nomodeset \
+    modloop=${netboot}/modloop-${flavor} \
+    alpine_repo=${alpine-repo}/${version}/main/ \
+    apkovl=${apkovl} \
+    bootscript=${bootscript}
+boot
